@@ -1,0 +1,5 @@
+{
+  "name": "NoFeeSwap Interface",
+  "description": "A modern, high-performance decentralized exchange interface for the NoFeeSwap protocol, featuring concentrated liquidity and graphical kernel management.",
+  "requestFramePermissions": []
+}

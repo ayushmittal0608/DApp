@@ -1,0 +1,127 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  
+  --color-brand-primary: #60a5fa;
+  --color-brand-secondary: #a78bfa;
+  --color-brand-accent: #f472b6;
+  
+  --radius-xl: 1.25rem;
+  --radius-2xl: 2rem;
+}
+
+@layer base {
+  body {
+    @apply bg-[#02040a] text-slate-300 font-sans antialiased selection:bg-blue-500/30;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Custom Scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-slate-800 rounded-full hover:bg-slate-700 transition-colors;
+  }
+}
+
+@layer components {
+  .glass {
+    background: rgba(2, 4, 10, 0.4);
+    backdrop-filter: blur(40px);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  }
+
+  .glass-card {
+    background: rgba(2, 4, 10, 0.4);
+    backdrop-filter: blur(40px);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    border-radius: 2rem;
+    padding: 1.5rem;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .glass-card::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to bottom right, rgba(255, 255, 255, 0.05), transparent);
+    pointer-events: none;
+  }
+
+  .btn-primary {
+    position: relative;
+    overflow: hidden;
+    background-color: #2563eb;
+    color: white;
+    font-weight: 800;
+    padding: 0.875rem 2rem;
+    border-radius: 1.25rem;
+    transition: all 0.2s;
+    box-shadow: 0 0 20px rgba(37, 99, 235, 0.3);
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .btn-primary:hover {
+    background-color: #3b82f6;
+  }
+
+  .btn-primary:active {
+    transform: scale(0.98);
+  }
+
+  .input-field {
+    background: rgba(15, 23, 42, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 1.25rem;
+    padding: 1rem;
+    outline: none;
+    transition: all 0.2s;
+    color: white;
+    font-weight: 500;
+    width: 100%;
+  }
+
+  .input-field:focus {
+    border-color: rgba(59, 130, 246, 0.5);
+    background: rgba(15, 23, 42, 0.6);
+  }
+
+  .noise {
+    position: fixed;
+    top: -50%;
+    left: -50%;
+    right: -50%;
+    bottom: -50%;
+    width: 200%;
+    height: 200%;
+    background: transparent url('http://assets.iceablethemes.com/img/noise-transparent.png') repeat 0 0;
+    background-repeat: repeat;
+    opacity: .03;
+    visibility: visible;
+    z-index: 999;
+    pointer-events: none;
+  }
+}
+
+.text-gradient {
+  @apply bg-clip-text text-transparent bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 font-extrabold;
+}
+
+.glow-blue {
+  @apply shadow-[0_0_40px_rgba(59,130,246,0.15)];
+}
