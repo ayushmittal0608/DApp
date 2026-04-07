@@ -7,6 +7,7 @@ import addresses from '../contracts/deployedAddresses.json';
 import PoolArtifact from '../../../backend/artifacts/contracts/Pool.sol/Pool.json';
 import PoolFactoryArtifact from '../../../backend/artifacts/contracts/PoolFactory.sol/PoolFactory.json';
 import { useWeb3 } from '../hooks/useWeb3';
+import { AlertBox, type AlertMessage } from './AlertBox';
 
 const FACTORY_ADDRESS = addresses.factory;
 const POOL_ABI = PoolArtifact.abi;
@@ -25,6 +26,7 @@ export function Pool() {
   const [poolAddress, setPoolAddress] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingMints, setIsLoadingMints] = useState(false);
+  const [alert, setAlert] = useState<AlertMessage | null>(null);
   
   const [mintEvents, setMintEvents] = useState<Array<{
     provider: string;
@@ -102,21 +104,29 @@ export function Pool() {
     if (!account) {
       await connect();
     }
+    if (!account) {
+      setAlert({ type: 'error', message: 'Please connect your wallet first.' });
+      return;
+    }
     if (!provider) {
       console.warn("Wallet not connected. Cannot burn position.");
+      setAlert({ type: 'error', message: 'Web3 provider not found.' });
       return;
     }
     const activePoolAddress = await getActivePoolAddress();
     if (!activePoolAddress) {
       console.warn("No pool available. Initialize a pool first.");
+      setAlert({ type: 'error', message: 'No active pool found. Initialize a pool first.' });
       return;
     }
     if (usdcAmountRaw === undefined || nfsAmountRaw === undefined) {
       console.error("Invalid burn amounts provided.");
+      setAlert({ type: 'error', message: 'Invalid burn amounts provided.' });
       return;
     }
 
     try {
+      setAlert({ type: 'info', message: 'Please confirm the burn transaction in your wallet...' });
       setIsLoading(true);
       const signer = await provider.getSigner();
       const poolContract = new ethers.Contract(activePoolAddress, POOL_ABI, signer);
@@ -131,6 +141,7 @@ export function Pool() {
           burnUsdc: usdcAmountRaw.toString(),
           burnNfs: nfsAmountRaw.toString()
         });
+        setAlert({ type: 'error', message: 'Insufficient deposited balance to burn these amounts.' });
         return;
       }
       const tx = await poolContract.burn(usdcAmountRaw, nfsAmountRaw);
@@ -140,8 +151,15 @@ export function Pool() {
         loadPoolData(),
         loadMintEvents()
       ]);
-    } catch (err) {
+      setAlert({ type: 'success', message: 'Liquidity position burned successfully.' });
+    } catch (err: any) {
       console.error("Failed to burn position:", err);
+      if (err?.code === 'ACTION_REJECTED') {
+        setAlert({ type: 'error', message: 'Transaction rejected by user.' });
+      } else {
+        const message = err?.shortMessage || err?.reason || err?.message || 'Failed to burn position.';
+        setAlert({ type: 'error', message });
+      }
     } finally {
       setIsLoading(false);
     }
@@ -151,16 +169,23 @@ export function Pool() {
     if(!account) {
       await connect();
     }
+    if (!account) {
+      setAlert({ type: 'error', message: 'Please connect your wallet first.' });
+      return;
+    }
     if (!provider) {
       console.warn("Wallet not connected. Cannot mint position.");
+      setAlert({ type: 'error', message: 'Web3 provider not found.' });
       return;
     }
     const activePoolAddress = await getActivePoolAddress();
     if (!activePoolAddress) {
       console.warn("No pool available. Initialize a pool first.");
+      setAlert({ type: 'error', message: 'No active pool found. Initialize a pool first.' });
       return;
     }
     try {
+      setAlert({ type: 'info', message: 'Please confirm approvals and mint in your wallet...' });
       setIsLoading(true);
       const signer = await provider.getSigner();
       const poolContract = new ethers.Contract(activePoolAddress, POOL_ABI, signer);
@@ -185,9 +210,16 @@ export function Pool() {
       await tx.wait();
       console.log("Position minted successfully!");
       await loadMintEvents();
+      setAlert({ type: 'success', message: 'Liquidity deployed successfully.' });
     }
-    catch (err) {
+    catch (err: any) {
       console.error("Failed to mint position:", err);
+      if (err?.code === 'ACTION_REJECTED') {
+        setAlert({ type: 'error', message: 'Transaction rejected by user.' });
+      } else {
+        const message = err?.shortMessage || err?.reason || err?.message || 'Failed to mint position.';
+        setAlert({ type: 'error', message });
+      }
     }
     finally {
       setIsLoading(false);
@@ -432,11 +464,17 @@ export function Pool() {
     if (!account) {
       await connect();
     }
+    if (!account) {
+      setAlert({ type: 'error', message: 'Please connect your wallet first.' });
+      return;
+    }
     if (!provider) {
       console.warn("Wallet not connected. Cannot manage pool.");
+      setAlert({ type: 'error', message: 'Web3 provider not found.' });
       return;
     }
     try {
+      setAlert({ type: 'info', message: 'Please confirm the transaction in your wallet...' });
       setIsLoading(true);
       const signer = await provider.getSigner();
       const poolContract = new ethers.Contract(pool.address, POOL_ABI, signer);
@@ -455,8 +493,15 @@ export function Pool() {
       await tx.wait();
       setPoolAddress(pool.address);
       await Promise.all([loadPoolData(), loadMintEvents()]);
-    } catch (err) {
+      setAlert({ type: 'success', message: 'Pool activated successfully.' });
+    } catch (err: any) {
       console.error("Failed to manage pool:", err);
+      if (err?.code === 'ACTION_REJECTED') {
+        setAlert({ type: 'error', message: 'Transaction rejected by user.' });
+      } else {
+        const message = err?.shortMessage || err?.reason || err?.message || 'Failed to manage pool.';
+        setAlert({ type: 'error', message });
+      }
     } finally {
       setIsLoading(false);
     }
@@ -628,11 +673,13 @@ export function Pool() {
 
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 30 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="w-full max-w-[1200px] mx-auto mt-14 px-4"
-    >
+    <>
+      <AlertBox alert={alert} onClose={() => setAlert(null)} />
+      <motion.div
+        initial={{ opacity: 0, y: 30 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="w-full max-w-[1200px] mx-auto mt-14 px-4"
+      >
       <div className="flex items-end justify-between mb-4">
         <div>
           <h2 className="text-4xl font-black text-white tracking-tighter">LIQUIDITY HUB</h2>
@@ -881,6 +928,7 @@ export function Pool() {
         </div>
       )}
     </motion.div>
+    </>
   );
 }
 
