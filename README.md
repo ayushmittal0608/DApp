@@ -1,6 +1,7 @@
 # Todo
 - Currently, user authorization is left due to which any account can connect and no function is dependent on modifier owner currently.
 - Currently, pool.tsx and swap.tsx buttons are not having loggers to be set, I have used custom alert box for logging, rather than toast.
+- Currently, simple storage contract is not there, actually I haven't implemented it due to get fresh results out for development, and testing.
 
 # Mathematical Functions are being implemented thoroughly
 - Pool Initialisation and Creation
