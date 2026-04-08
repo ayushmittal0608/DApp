@@ -57,12 +57,7 @@ export function InitializePool({ onPoolCreated = () => {} }: { onPoolCreated?: (
 
       setAlert({ type: 'info', message: 'Please confirm the transaction in MetaMask...' });
 
-      const tx = await poolContract.createPool(
-        [addresses.usdc, addresses.nfs],    
-        ethers.parseUnits(feeTier, 4),        
-        ethers.parseUnits(initialPrice, 18),    
-        kernelType
-      );
+      const tx = await poolContract.createPool();
 
       console.log('Transaction submitted:', tx.hash);
       
