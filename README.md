@@ -1,9 +1,10 @@
 # Todo
 - Currently, user authorization is left due to which any account can connect and no function is dependent on modifier owner currently.
 - Currently, simple storage contract is not there, actually I haven't implemented it due to get fresh results out for development, and testing.
+- Currently, tracking pending states before transaction (mempool monitoring) and decoding calldata to extract slippage amount and trade size is pending.
 
 # Mathematical Functions are being implemented thoroughly
-- Pool Initialisation and Creation
+- Pool Creation and Initialisation
   1. Fee Tier
   2. Oracle Price Seed
   3. Kernel Type
