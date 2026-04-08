@@ -60,16 +60,8 @@ contract Pool {
     }
     constructor(
         address _owner,
-        address[] memory _assets,
-        uint256 _fee,
-        uint256 _initialPrice,
-        string memory _kernelType
     ) {
         owner = _owner;
-        assets = _assets;
-        fee = _fee;
-        initialPrice = _initialPrice;
-        kernelType = _kernelType;
     }
 
     function initializePool(
