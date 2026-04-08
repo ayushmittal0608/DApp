@@ -21,7 +21,30 @@ export function InitializePool({ onPoolCreated = () => {} }: { onPoolCreated?: (
   const [alert, setAlert] = useState<AlertMessage | null>(null);
   const [isInitializing, setIsInitializing] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
-  const { account, connect, sendTransaction, provider } = useWeb3();
+  const { account, connect, provider } = useWeb3();
+
+  const getPoolAddressFromReceipt = (receipt: any, factoryContract: ethers.Contract): string | undefined => {
+    const iface: ethers.Interface = factoryContract.interface ?? new ethers.Interface(FACTORY_CONTRACT_ABI);
+    const factoryAddress = String(factoryContract?.target ?? FACTORY_CONTRACT_ADDRESS).toLowerCase();
+
+    const logs = receipt?.logs ?? [];
+    for (const log of logs) {
+      try {
+        if (!log) continue;
+        if (log.address && String(log.address).toLowerCase() !== factoryAddress) continue;
+
+        const parsed = iface.parseLog({ topics: log.topics, data: log.data });
+        if (parsed?.name !== 'PoolCreated') continue;
+
+        const addr = parsed?.args?.poolAddress ?? parsed?.args?.[0];
+        if (addr) return String(addr);
+      } catch {
+      }
+    }
+
+    const legacyEvent = receipt?.events?.find((e: any) => e?.event === 'PoolCreated');
+    return legacyEvent?.args?.poolAddress ?? legacyEvent?.args?.[0];
+  };
 
   const handleInitialize = async () => {
     try {
@@ -55,6 +78,35 @@ export function InitializePool({ onPoolCreated = () => {} }: { onPoolCreated?: (
         signer
       );
 
+      const network = await provider.getNetwork();
+      const chainId = Number(network.chainId);
+
+      const factoryCode = await provider.getCode(FACTORY_CONTRACT_ADDRESS);
+      if (!factoryCode || factoryCode === '0x') {
+        setAlert({
+          type: 'error',
+          message: `PoolFactory not found at ${FACTORY_CONTRACT_ADDRESS} on chainId ${chainId}. Switch networks or redeploy and update deployedAddresses.json.`,
+        });
+        return;
+      }
+
+      try {
+        const factoryOwner = await poolContract.owner();
+        if (currentAccount && factoryOwner && String(factoryOwner).toLowerCase() !== String(currentAccount).toLowerCase()) {
+          setAlert({
+            type: 'error',
+            message: `Connected wallet (${currentAccount}) is not the PoolFactory owner (${factoryOwner}). Import the deployer account or transfer ownership.`,
+          });
+          return;
+        }
+      } catch {
+        setAlert({
+          type: 'error',
+          message: `Contract at ${FACTORY_CONTRACT_ADDRESS} does not look like PoolFactory on chainId ${chainId}. Verify you're on the correct network and ABI/address are up to date.`,
+        });
+        return;
+      }
+
       setAlert({ type: 'info', message: 'Please confirm the transaction in MetaMask...' });
 
       const tx = await poolContract.createPool();
@@ -64,27 +116,40 @@ export function InitializePool({ onPoolCreated = () => {} }: { onPoolCreated?: (
       const receipt = await tx.wait();
       console.log('Transaction receipt:', receipt);
 
-      const iface = new ethers.Interface(FACTORY_CONTRACT_ABI);
-      const parsedLog = receipt.logs
-        ?.map((log: any) => {
-          try {
-            return iface.parseLog(log);
-          } catch {
-            return null;
-          }
-        })
-        .find((parsed: any) => parsed && parsed.name === 'PoolCreated');
+      if (receipt?.status === 0) {
+        setAlert({
+          type: 'error',
+          message: `createPool reverted (tx ${tx.hash}). Check PoolFactory permissions and contract deployment.`,
+        });
+        return;
+      }
 
-      const legacyEvent = receipt.events?.find((e: any) => e.event === 'PoolCreated');
-
-      const newPoolAddress =
-        parsedLog?.args?.poolAddress ??
-        parsedLog?.args?.[0] ??
-        legacyEvent?.args?.poolAddress ??
-        legacyEvent?.args?.[0];
+      let newPoolAddress = getPoolAddressFromReceipt(receipt, poolContract);
 
       if (!newPoolAddress) {
-        setAlert({ type: 'error', message: 'Failed to retrieve new pool address from transaction receipt.' });
+        try {
+          const active = await poolContract.activePool();
+          if (active && active !== ethers.ZeroAddress) newPoolAddress = String(active);
+        } catch {
+        
+        }
+      }
+
+      if (!newPoolAddress) {
+        try {
+          const pools = await poolContract.getPools();
+          const last = pools?.[pools.length - 1];
+          if (last && last !== ethers.ZeroAddress) newPoolAddress = String(last);
+        } catch {
+          
+        }
+      }
+
+      if (!newPoolAddress) {
+        setAlert({
+          type: 'error',
+          message: `Tx confirmed (tx ${tx.hash}) but PoolCreated was not found and activePool/getPools did not return an address. Verify PoolFactory address/network.`,
+        });
         return;
       }
 

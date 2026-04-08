@@ -35,7 +35,7 @@ export function KernelVisualizer() {
     const max = center * 1.2;
     const points = 41;
     const step = (max - min) / (points - 1);
-    const sigma = (max - min) / 6; // ~3 sigma on each side
+    const sigma = (max - min) / 6; 
     const peak = 200;
 
     const series = Array.from({ length: points }, (_, i) => {
@@ -47,7 +47,7 @@ export function KernelVisualizer() {
       } else if (kernelType === 'uniform') {
         liquidity = peak * 0.6;
       } else {
-        // triangular
+        
         const t = Math.max(0, 1 - Math.abs(price - center) / (max - center));
         liquidity = peak * t;
       }

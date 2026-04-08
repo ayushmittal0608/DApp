@@ -24,6 +24,7 @@ contract Pool {
 
     mapping(address => uint256) public userUsdcDeposit;
     mapping(address => uint256) public userNfsDeposit;
+    mapping(address => bool) public authorizedUsers;
 
 
     event PoolInitialized(
@@ -49,6 +50,11 @@ contract Pool {
         _;
     }
 
+    modifier onlyAuthorized() {
+        require(authorizedUsers[msg.sender], "Not authorized");
+        _;
+    }
+
     modifier isInit() {
         require(isInitialized, "Pool not initialized");
         _;
@@ -58,18 +64,23 @@ contract Pool {
         require(!isInitialized, "Pool is already initialized");
         _;
     }
-    constructor(
-        address _owner,
-        address[] memory _assets,
-        uint256 _fee,
-        uint256 _initialPrice,
-        string memory _kernelType
-    ) {
+
+    constructor(address _owner) {
         owner = _owner;
-        assets = _assets;
-        fee = _fee;
-        initialPrice = _initialPrice;
-        kernelType = _kernelType;
+        authorizedUsers[_owner] = true;
+    }
+
+    function addAuthorizedUser(address _user) external onlyOwner {
+        require(_user != address(0), "Invalid user address");
+        authorizedUsers[_user] = true;
+    }
+
+    function removeAuthorizedUser(address _user) external onlyOwner {
+        authorizedUsers[_user] = false;
+    }
+
+    function isAuthorized(address _user) external view returns (bool) {
+        return authorizedUsers[_user];
     }
 
     function initializePool(
@@ -97,7 +108,6 @@ contract Pool {
     }
 
     function activate() external {
-        require(isInitialized, "Pool not initialized");
         isActive = true;
     }
 
@@ -105,7 +115,7 @@ contract Pool {
         isActive = false;
     }
 
-    function mint(uint256 _usdcAmount, uint256 _nfsAmount) external isInit {
+    function mint(uint256 _usdcAmount, uint256 _nfsAmount) external isInit onlyAuthorized {
         require(isActive, "Pool not active");
         require(_usdcAmount > 0 || _nfsAmount > 0, "Amount must be > 0");
 
@@ -124,7 +134,7 @@ contract Pool {
         emit LiquidityAdded(msg.sender, _usdcAmount, _nfsAmount);
     }
 
-    function burn(uint256 _usdcAmount, uint256 _nfsAmount) external isInit {
+    function burn(uint256 _usdcAmount, uint256 _nfsAmount) external isInit onlyAuthorized {
         require(_usdcAmount > 0 || _nfsAmount > 0, "Amount must be > 0");
         require(userUsdcDeposit[msg.sender] >= _usdcAmount, "Insufficient USDC balance");
         require(userNfsDeposit[msg.sender] >= _nfsAmount, "Insufficient NFS balance");
@@ -155,7 +165,7 @@ contract Pool {
         uint256 amountIn,
         uint256 minAmountOut,
         uint256 slippageBps
-    ) external isInit {
+    ) external isInit onlyAuthorized {
         require(isActive, "Pool not active");
         require(amountIn > 0, "Amount must be > 0");
         require(tokenIn == assets[0] || tokenIn == assets[1], "Invalid token");

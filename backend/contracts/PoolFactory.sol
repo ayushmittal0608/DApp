@@ -26,12 +26,19 @@ contract PoolFactory {
         owner = msg.sender;
     }
 
-    function createPool() external {
+    function createPool() external onlyOwner {
         Pool newPool = new Pool(msg.sender);
         pools.push(address(newPool));
         isPool[address(newPool)] = true;
+
         address previous = activePool;
+        if (previous != address(0)) {
+            Pool(previous).deactivate();
+        }
+
         activePool = address(newPool);
+        Pool(activePool).activate();
+
         emit ActivePoolChanged(previous, activePool);
         emit PoolCreated(address(newPool));
     }
@@ -43,13 +50,14 @@ contract PoolFactory {
     function setActivePool(address _pool) external {
         require(isPool[_pool], "Not a pool");
 
-        if (activePool != address(0)) {
-            Pool(activePool).deactivate(); 
+        address previous = activePool;
+        if (previous != address(0)) {
+            Pool(previous).deactivate();
         }
 
         activePool = _pool;
-        Pool(_pool).activate();           
+        Pool(_pool).activate();
 
-        emit ActivePoolChanged(activePool, _pool);
+        emit ActivePoolChanged(previous, _pool);
     }
 }

@@ -1,5 +1,4 @@
 # Todo
-- Currently, user authorization is left due to which any account can connect and no function is dependent on modifier owner currently.
 - Currently, tracking pending states before transaction (mempool monitoring) and decoding calldata to extract slippage amount and trade size is pending.
 
 # Mathematical Functions are being implemented thoroughly

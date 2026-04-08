@@ -197,6 +197,25 @@ export function Swap() {
         return;
       }
 
+      const poolRead = new ethers.Contract(active, POOL_ABI, activeProvider);
+      const [authorized, isInit, isActive] = await Promise.all([
+        poolRead.isAuthorized(account),
+        poolRead.isInitialized(),
+        poolRead.isActive()
+      ]);
+      if (!authorized) {
+        setAlert({ type: 'error', message: 'Not authorized for this pool. Ask the pool owner to authorize your address.' });
+        return;
+      }
+      if (!isInit) {
+        setAlert({ type: 'error', message: 'Pool is not initialized yet.' });
+        return;
+      }
+      if (!isActive) {
+        setAlert({ type: 'error', message: 'Pool is not active. Ask the owner to set it as the active pool.' });
+        return;
+      }
+
       setAlert({ type: 'info', message: 'Please confirm the swap in your wallet...' });
 
       const tokenIn = fromToken === 'USDC' ? addresses.usdc : addresses.nfs;

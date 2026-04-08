@@ -27,6 +27,11 @@ export function Pool() {
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingMints, setIsLoadingMints] = useState(false);
   const [alert, setAlert] = useState<AlertMessage | null>(null);
+  const [poolOwner, setPoolOwner] = useState<string | null>(null);
+  const [isAccountAuthorized, setIsAccountAuthorized] = useState(false);
+  const [isAccountPoolOwner, setIsAccountPoolOwner] = useState(false);
+  const [authTarget, setAuthTarget] = useState('');
+  const [isUpdatingAuth, setIsUpdatingAuth] = useState(false);
   
   const [mintEvents, setMintEvents] = useState<Array<{
     provider: string;
@@ -53,6 +58,92 @@ export function Pool() {
   const { provider, account, connect } = useWeb3();
   const [usdcAmount, setUsdcAmount] = useState<number>(0);
   const [nfsAmount, setNfsAmount] = useState<number>(0);
+
+  const refreshAuthorization = async () => {
+    const activeProvider = provider || (window?.ethereum ? new ethers.BrowserProvider(window.ethereum) : null);
+    if (!activeProvider || !account) {
+      setPoolOwner(null);
+      setIsAccountAuthorized(false);
+      setIsAccountPoolOwner(false);
+      return;
+    }
+
+    const activePoolAddress = await getActivePoolAddress();
+    if (!activePoolAddress) {
+      setPoolOwner(null);
+      setIsAccountAuthorized(false);
+      setIsAccountPoolOwner(false);
+      return;
+    }
+
+    try {
+      const poolContract = new ethers.Contract(activePoolAddress, POOL_ABI, activeProvider);
+      const [ownerAddr, authorized] = await Promise.all([poolContract.owner(), poolContract.isAuthorized(account)]);
+      setPoolOwner(String(ownerAddr));
+      setIsAccountAuthorized(Boolean(authorized));
+      setIsAccountPoolOwner(String(ownerAddr).toLowerCase() === account.toLowerCase());
+    } catch (err) {
+      console.error("Failed to refresh authorization:", err);
+      setPoolOwner(null);
+      setIsAccountAuthorized(false);
+      setIsAccountPoolOwner(false);
+    }
+  };
+
+  const handleAuthorize = async (mode: 'add' | 'remove') => {
+    try {
+      setAlert(null);
+      if (!account) {
+        await connect();
+      }
+      if (!account) {
+        setAlert({ type: 'error', message: 'Please connect your wallet first.' });
+        return;
+      }
+      if (!provider) {
+        setAlert({ type: 'error', message: 'Web3 provider not found.' });
+        return;
+      }
+
+      const activePoolAddress = await getActivePoolAddress();
+      if (!activePoolAddress) {
+        setAlert({ type: 'error', message: 'No active pool found. Initialize a pool first.' });
+        return;
+      }
+
+      const target = authTarget.trim();
+      if (!ethers.isAddress(target)) {
+        setAlert({ type: 'error', message: 'Enter a valid address to authorize.' });
+        return;
+      }
+
+      const signer = await provider.getSigner();
+      const poolContract = new ethers.Contract(activePoolAddress, POOL_ABI, signer);
+
+      const ownerAddr = await poolContract.owner();
+      if (String(ownerAddr).toLowerCase() !== account.toLowerCase()) {
+        setAlert({ type: 'error', message: `Only the pool owner (${ownerAddr}) can update authorization.` });
+        return;
+      }
+
+      setIsUpdatingAuth(true);
+      setAlert({ type: 'info', message: mode === 'add' ? 'Authorizing user...' : 'Removing authorization...' });
+      const tx = mode === 'add' ? await poolContract.addAuthorizedUser(target) : await poolContract.removeAuthorizedUser(target);
+      await tx.wait();
+      setAlert({ type: 'success', message: mode === 'add' ? 'User authorized.' : 'User deauthorized.' });
+      await refreshAuthorization();
+    } catch (err: any) {
+      console.error("Failed to update authorization:", err);
+      if (err?.code === 'ACTION_REJECTED') {
+        setAlert({ type: 'error', message: 'Transaction rejected by user.' });
+      } else {
+        const message = err?.shortMessage || err?.reason || err?.message || 'Failed to update authorization.';
+        setAlert({ type: 'error', message });
+      }
+    } finally {
+      setIsUpdatingAuth(false);
+    }
+  };
 
   const resolvePoolAddress = async () => {
     const activeProvider = provider || (window?.ethereum ? new ethers.BrowserProvider(window.ethereum) : null);
@@ -119,6 +210,22 @@ export function Pool() {
       setAlert({ type: 'error', message: 'No active pool found. Initialize a pool first.' });
       return;
     }
+
+    try {
+      const poolRead = new ethers.Contract(activePoolAddress, POOL_ABI, provider);
+      const [authorized, isInit] = await Promise.all([poolRead.isAuthorized(account), poolRead.isInitialized()]);
+      if (!authorized) {
+        setAlert({ type: 'error', message: 'Not authorized for this pool. Ask the pool owner to authorize your address.' });
+        return;
+      }
+      if (!isInit) {
+        setAlert({ type: 'error', message: 'Pool is not initialized yet.' });
+        return;
+      }
+    } catch (err) {
+      console.error("Authorization check failed:", err);
+    }
+
     if (usdcAmountRaw === undefined || nfsAmountRaw === undefined) {
       console.error("Invalid burn amounts provided.");
       setAlert({ type: 'error', message: 'Invalid burn amounts provided.' });
@@ -185,6 +292,25 @@ export function Pool() {
       return;
     }
     try {
+      const poolRead = new ethers.Contract(activePoolAddress, POOL_ABI, provider);
+      const [authorized, isInit, active] = await Promise.all([
+        poolRead.isAuthorized(account),
+        poolRead.isInitialized(),
+        poolRead.isActive()
+      ]);
+      if (!authorized) {
+        setAlert({ type: 'error', message: 'Not authorized for this pool. Ask the pool owner to authorize your address.' });
+        return;
+      }
+      if (!isInit) {
+        setAlert({ type: 'error', message: 'Pool is not initialized yet.' });
+        return;
+      }
+      if (!active) {
+        setAlert({ type: 'error', message: 'Pool is not active. Ask the owner to set it as the active pool.' });
+        return;
+      }
+
       setAlert({ type: 'info', message: 'Please confirm approvals and mint in your wallet...' });
       setIsLoading(true);
       const signer = await provider.getSigner();
@@ -521,6 +647,10 @@ export function Pool() {
   }, [provider, account]);
 
   useEffect(() => {
+    refreshAuthorization();
+  }, [provider, account, poolAddress]);
+
+  useEffect(() => {
     seenMintEvents.current = new Set();
     lastMintBlock.current = null;
     setMintEvents([]);
@@ -701,6 +831,54 @@ export function Pool() {
 
       {activeTab === 'positions' ? (
         <div className="space-y-6">
+          <div className="glass-card border border-white/5 p-6">
+            <div className="flex items-center justify-between gap-6 flex-wrap">
+              <div className="flex items-center gap-3">
+                <Shield className="w-4 h-4 text-blue-400" />
+                <div>
+                  <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Authorization</div>
+                  <div className="text-xs text-slate-200 font-mono">
+                    {poolAddress ? `Pool ${poolAddress.slice(0, 6)}...${poolAddress.slice(-4)}` : 'No active pool'}
+                    {poolOwner ? ` • Owner ${poolOwner.slice(0, 6)}...${poolOwner.slice(-4)}` : ''}
+                  </div>
+                </div>
+              </div>
+              <div className={cn(
+                "px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border",
+                isAccountAuthorized ? "bg-green-500/10 text-green-400 border-green-500/20" : "bg-red-500/10 text-red-400 border-red-500/20"
+              )}>
+                {isAccountAuthorized ? "Authorized" : "Not Authorized"}
+              </div>
+            </div>
+
+            {isAccountPoolOwner && (
+              <div className="mt-4 flex flex-col md:flex-row gap-3 md:items-center">
+                <input
+                  value={authTarget}
+                  onChange={(e) => setAuthTarget(e.target.value)}
+                  placeholder="0x... address to authorize"
+                  className="flex-1 px-4 py-3 rounded-2xl bg-slate-950/40 border border-white/10 text-xs text-slate-200 font-mono outline-none"
+                />
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => handleAuthorize('add')}
+                    disabled={isUpdatingAuth}
+                    className="px-4 py-3 rounded-2xl bg-blue-600 text-white text-[10px] font-black uppercase tracking-widest disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    Authorize
+                  </button>
+                  <button
+                    onClick={() => handleAuthorize('remove')}
+                    disabled={isUpdatingAuth}
+                    className="px-4 py-3 rounded-2xl bg-slate-900 text-slate-200 text-[10px] font-black uppercase tracking-widest border border-white/10 disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    Remove
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
           <div className="glass-card border-dashed border-2 border-white/5 flex flex-col items-center justify-left py-12 text-center">
             <div className="relative mb-6">
               <div className="absolute inset-0 bg-blue-500 blur-2xl opacity-20" />
@@ -741,18 +919,20 @@ export function Pool() {
                     <div className="px-4 py-3 font-mono text-purple-400">{evt.nfsAmount}</div>
                     <div className="px-4 py-3 font-mono text-slate-400">{evt.blockNumber}</div>
                     <div className="px-4 py-3 text-right">
-                      <button
-                        className="px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest cursor-pointer bg-slate-900 hover:bg-slate-800 border border-white/5 text-slate-300 transition-all"
-                        onClick={() => handleBurnMint(evt.txHash, evt.blockNumber, evt.usdcAmountRaw, evt.nfsAmountRaw)}
-                        disabled={!account || evt.provider.toLowerCase() !== account.toLowerCase() || isLoading}
-                        title={!account
-                          ? "Connect wallet to burn"
-                          : evt.provider.toLowerCase() !== account.toLowerCase()
-                            ? "Only the original provider can burn"
-                            : "Burn this mint"}
-                      >
-                        <Flame className="w-3.5 h-3.5 inline-block align-middle" />
-                      </button>
+                       <button
+                         className="px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest cursor-pointer bg-slate-900 hover:bg-slate-800 border border-white/5 text-slate-300 transition-all"
+                         onClick={() => handleBurnMint(evt.txHash, evt.blockNumber, evt.usdcAmountRaw, evt.nfsAmountRaw)}
+                         disabled={!account || !isAccountAuthorized || evt.provider.toLowerCase() !== account.toLowerCase() || isLoading}
+                         title={!account
+                           ? "Connect wallet to burn"
+                           : !isAccountAuthorized
+                             ? "Not authorized for this pool"
+                           : evt.provider.toLowerCase() !== account.toLowerCase()
+                             ? "Only the original provider can burn"
+                             : "Burn this mint"}
+                       >
+                         <Flame className="w-3.5 h-3.5 inline-block align-middle" />
+                       </button>
                     </div>
                   </div>
                 ))}
@@ -786,7 +966,7 @@ export function Pool() {
 
             <button className="btn-primary" 
               onClick={handleMint}
-              disabled={isLoading || (usdcAmount <= 0 && nfsAmount <= 0)}
+              disabled={isLoading || !isAccountAuthorized || (usdcAmount <= 0 && nfsAmount <= 0)}
               >
               {isLoading ? "PROCESSING..." : "DEPLOY LIQUIDITY"}
             </button>
