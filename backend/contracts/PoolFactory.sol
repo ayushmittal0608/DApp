@@ -26,7 +26,7 @@ contract PoolFactory {
         owner = msg.sender;
     }
 
-    function createPool() external {
+    function createPool() external onlyOwner {
         Pool newPool = new Pool(msg.sender);
         pools.push(address(newPool));
         isPool[address(newPool)] = true;
