@@ -26,12 +26,7 @@ contract PoolFactory {
         owner = msg.sender;
     }
 
-    function createPool(
-        address[] memory _assets,
-        uint256 _fee,
-        uint256 _initialPrice,
-        string calldata _kernelType
-    ) external {
+    function createPool() external {
         Pool newPool = new Pool(msg.sender);
         pools.push(address(newPool));
         isPool[address(newPool)] = true;
