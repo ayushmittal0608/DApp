@@ -9,7 +9,7 @@ contract PoolFactory {
     address public activePool;
     mapping(address => bool) public isPool;
 
-    event PoolCreated(address indexed poolAddress, address[] assets, uint256 fee, uint256 initialPrice, string kernelType);
+    event PoolCreated(address indexed poolAddress);
     event ActivePoolChanged(address indexed previousPool, address indexed newPool);
 
     modifier onlyOwner() {
@@ -32,13 +32,13 @@ contract PoolFactory {
         uint256 _initialPrice,
         string calldata _kernelType
     ) external {
-        Pool newPool = new Pool(msg.sender, _assets, _fee, _initialPrice, _kernelType);
+        Pool newPool = new Pool(msg.sender);
         pools.push(address(newPool));
         isPool[address(newPool)] = true;
         address previous = activePool;
         activePool = address(newPool);
         emit ActivePoolChanged(previous, activePool);
-        emit PoolCreated(address(newPool), _assets, _fee, _initialPrice, _kernelType);
+        emit PoolCreated(address(newPool));
     }
 
     function getPools() external view returns (address[] memory) {
