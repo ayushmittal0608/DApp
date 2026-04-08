@@ -20,7 +20,7 @@
   2. Triangular : f(triangular) = Peak . t (where t is max(0, 1-abs(price-center)/(max-center)))
   3. Uniform: f(uniform) = Peak . 0.6
 
-# Add-on To Implement
+# Add-on To Implement (Essential for implementation to know how market trading actually works)
 - Front run to run swap logic before user with same input to get highest possible NFS, making it worse for user to have high profits.
 - Back run to run swap logic with recieved NFS back to USDC to get net profit on USDC, leading to net loss of user on NFS.
 - Above parameters can only be achieved through mempool monitoring and calldata decoding.
