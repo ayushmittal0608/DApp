@@ -1,5 +1,6 @@
 # Todo
 - Currently, tracking pending states before transaction (mempool monitoring) and decoding calldata to extract slippage amount and trade size is pending.
+- Some redundant states and repeated logics are there, I will fix it and this application will become ready professionally.
 
 # Mathematical Functions are being implemented thoroughly
 - Pool Creation and Initialisation
