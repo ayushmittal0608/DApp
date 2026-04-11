@@ -229,8 +229,8 @@
       ]
     },
     "D:\\DApp\\backend\\contracts\\Pool.sol": {
-      "lastModificationDate": 1775666438533,
-      "contentHash": "5ec7326e576d81fea85adaf8f4e064f6",
+      "lastModificationDate": 1775671016580,
+      "contentHash": "11181df6bec6507ace0b394007fab4df",
       "sourceName": "contracts/Pool.sol",
       "solcConfig": {
         "version": "0.8.20",
@@ -301,6 +301,42 @@
       ],
       "artifacts": [
         "PoolFactory"
+      ]
+    },
+    "D:\\DApp\\backend\\contracts\\BotExecutor.sol": {
+      "lastModificationDate": 1775891370636,
+      "contentHash": "a9cc6d3e7dc217dd67b8fd20cd2360c5",
+      "sourceName": "contracts/BotExecutor.sol",
+      "solcConfig": {
+        "version": "0.8.20",
+        "settings": {
+          "evmVersion": "paris",
+          "optimizer": {
+            "enabled": false,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        "^0.8.20"
+      ],
+      "artifacts": [
+        "Executor"
       ]
     }
   }

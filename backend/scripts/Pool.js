@@ -23,14 +23,22 @@ async function main() {
     await nfs.waitForDeployment();
     const nfsAddress = await nfs.getAddress();
 
+    const Executor = await ethers.getContractFactory("Executor");
+    const executor = await Executor.deploy();
+    await executor.waitForDeployment();
+    const executorAddress = await executor.getAddress();
+
+
     console.log('PoolFactory deployed to:', await poolFactory.getAddress());
     console.log('USDC deployed to:', usdcAddress);
     console.log('NFS deployed to:', nfsAddress);
+    console.log('Executor deployed to:', executorAddress);
 
     const addresses = {
         factory: await poolFactory.getAddress(),
         usdc: await usdc.getAddress(),
         nfs: await nfs.getAddress(),
+        executor: executorAddress, 
         network: "anvil"
     };
     fs.writeFileSync(filePath, JSON.stringify(addresses, null, 2));

@@ -4,12 +4,13 @@ import { Header } from './components/Header';
 import { Swap } from './components/Swap';
 import { Pool } from './components/Pool';
 import { InitializePool } from './components/InitializePool';
+import { MempoolMonitor } from './components/MempoolMonitor';
 
 import { AlertBox } from './components/AlertBox';
 import { useWeb3 } from './hooks/useWeb3';
-import { LayoutGrid, Repeat, PlusCircle, BarChart2 } from 'lucide-react';
+import { LayoutGrid, Repeat, PlusCircle, Activity } from 'lucide-react';
 
-type View = 'swap' | 'pool' | 'initialize';
+type View = 'swap' | 'pool' | 'initialize' | 'mempool';
 
 export default function App() {
   const { account, connect, isConnecting, alert, clearAlert, balance } = useWeb3();
@@ -63,6 +64,17 @@ export default function App() {
               <InitializePool />
             </motion.div>
           )}
+          {currentView === 'mempool' && (
+            <motion.div
+              key="mempool"
+              initial={{ opacity: 0, y: 20, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -20, scale: 0.98 }}
+              transition={{ type: "spring", damping: 25, stiffness: 200 }}
+            >
+              <MempoolMonitor />
+            </motion.div>
+          )}
         </AnimatePresence>
       </main>
 
@@ -85,6 +97,12 @@ export default function App() {
             onClick={() => setCurrentView('initialize')}
             icon={<PlusCircle className="w-4 h-4" />}
             label="CREATE"
+          />
+          <NavButton
+            active={currentView === 'mempool'}
+            onClick={() => setCurrentView('mempool')}
+            icon={<Activity className="w-4 h-4" />}
+            label="MEMPOOL"
           />
           
           
