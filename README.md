@@ -202,8 +202,7 @@ $$f(P) = 0.6 * P_peak$$
 $$T = W(ws) ∪ H(http)$$
 
 Where:
-$$W(ws) → WebSocket stream  
-H(http) → HTTP fallback stream$$
+$$W(ws) → WebSocket stream  H(http) → HTTP fallback stream$$
 
 State:
 
