@@ -75,6 +75,116 @@ For building such application, following languages, frameworks and tools were us
          -  priceImpact: It is used for the calculation of price impact during the conversion.
   13. I have implemented the sandwich bot but it is triggering only once and at the start of the token swapping, or sometimes don't, I need to optimise it more and get into the test cases for making it work.
 
+# Project Setup
+### Prerequisites
+Install these tools and languages first:
+#### Core
+1. Node.js
+2. npm
+3. git
+4. metamask (browser extension)
+
+#### Blockchain Dev Tools
+1. Hardhat
+2. Anvil
+
+### Clone and Install
+```
+git clone https://github.com/ayushmittal0608/DApp
+cd DApp
+```
+### Install frontend
+```
+cd frontend
+npm install
+```
+
+### Install backend
+```
+cd backend
+npm install
+```
+
+### Start Local Blockchain
+Use anvil
+```
+anvil
+```
+This gives three parameters:
+- 10 pre-funded accounts
+- Private Keys
+- RPC URL: http://127.0.0.1:8545
+
+### Create wallet
+- Create new wallet
+- Set password
+This creates metamask identity
+
+### Add Local Network
+Go to:
+$$Settings → Networks → Add Network → Manual$$
+Fill:
+```Network Name: Anvil Local
+RPC URL: http://127.0.0.1:8545
+Chain ID: 31337
+Currency Symbol: ETH
+```
+Save it.
+
+### Import Anvil Account
+Now pick private key from anvil and set env variables
+You will see:
+```
+Private Key: 0xabc123...
+```
+For account, I have hardcoded anvil to take first account from useWeb3.ts file.
+Note: I know that it is not a good practice to expose the env credentials but I have exposed it as it is just a test project, so you can get idea on how to setup the project more clearly. Companies manage keys and credentials through KMS and HSM to manage key security. Keys and credentials are too much important for any project that it is even encrypted using post quantum cryptography techniques like kyber, signing it with a digital signature such as dilithium.
+
+### Compiling Solidity File and Running Backend Script
+Inside backend, run:
+```
+npx hardhat node
+npx harhat compile
+npx hardhat run scripts/Pool.js --network anvil
+```
+- This is done to compile solidity file and run script to generate address for pool factory contract and two mock tokens NFS and USDC, ignore executor address because I was thinking about implementation of script for sandwich bot, but then eventually I used flash bot instead of it.
+- Now all the addresses are being stored inside /frontend/src/contracts/deployedAddresses.json inside the frontend.
+
+### Start frontend
+Inside frontend, run:
+```
+npm run dev
+```
+
+### Testing
+For running tests, we need to create a test folder, add test.sol file and run:
+```
+npx hardhat test 
+```
+### Example test (Pool Factory)
+```
+import { expect } from "chai";
+import { ethers } from "hardhat";
+
+describe("PoolFactory", function () {
+  it("should create a pool", async function () {
+    const Factory = await ethers.getContractFactory("PoolFactory");
+    const factory = await Factory.deploy();
+
+    await factory.createPool(
+      "USDC",
+      "NFS",
+      30,
+      1000,
+      1
+    );
+
+    const pools = await factory.getPools();
+    expect(pools.length).to.equal(1);
+  });
+});
+```
+Note: The above script can be implemented to run automated test to solidity but I prefer manual testing more as it gives us an insight for UI and everything on single screen.
 
 ## 🧮 Mathematical Model of the Protocol
 
@@ -216,3 +326,13 @@ $$D(tx) = ABI⁻¹(calldata)$$
 
 Where:
 $$D → decoding function  ABI⁻¹ → reverse ABI parser$$
+
+# Improvements and Add-ons
+- Pool should burn the tokens partially, Currently, whole mint is being burnt, partial burn is required.
+- Sandwich bot is not implemented perfectly, it needs more improvements.
+- We can add order books and tick based graphs for tracking the liquidity graphs after each mint, burn and swap to scale it.
+
+# References
+1. NoFeeSwap YellowPaper: github.com/NoFeeSwap/docs/blob/main/yellowpaper.pdf
+2. Documentation: https://docs.uniswap.org/contracts/v4/guides/ERC-6909
+3. Documentation: https://docs.metamask.io/
