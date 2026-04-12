@@ -1,4 +1,4 @@
-# Decentralized Application (d-App) Front-End Task
+# Decentralized Application (d-App) Front-End
 I have built a functional Web3 front-end application to facilitate wallet integration, creation of pool and its initialization with parameters like fee-tier, asset configuration, initial price and kernel-type. Along with that, I have given user authorization based on pool addresses on liquidity page which prompts Metamask to authorize user apart from owner. It also consists of pool management, adding/removing liquidity from pools, swap initiation with slippage tolerance and manipulation of graphical kernel.
 
 # Requirement Analysis
